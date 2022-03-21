@@ -6,7 +6,7 @@ import torch.nn as nn
 
 from torch.nn import BatchNorm2d
 
-resnet18_url = 'resnet18-5c106cde.pth'
+resnet18_url = 'models/AttaNet/resnet18-5c106cde.pth'
 
 
 def conv3x3(in_planes, out_planes, stride=1):

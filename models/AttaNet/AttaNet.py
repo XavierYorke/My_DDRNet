@@ -7,7 +7,7 @@ import pytorch_lightning as pl
 from loss import Tverskyloss
 
 
-class ConvBNReLU(pl.LightningModule):
+class ConvBNReLU(nn.Module):
     def __init__(self, in_chan, out_chan, ks=3, stride=1, padding=1, *args, **kwargs):
         super(ConvBNReLU, self).__init__()
         self.conv = nn.Conv2d(in_chan,
@@ -32,7 +32,7 @@ class ConvBNReLU(pl.LightningModule):
                 if not ly.bias is None: nn.init.constant_(ly.bias, 0)
 
 
-class AttaNetOutput(pl.LightningModule):
+class AttaNetOutput(nn.Module):
     def __init__(self, in_chan, mid_chan, n_classes, *args, **kwargs):
         super(AttaNetOutput, self).__init__()
         self.conv = ConvBNReLU(in_chan, mid_chan, ks=3, stride=1, padding=1)
@@ -64,7 +64,7 @@ class AttaNetOutput(pl.LightningModule):
         return wd_params, nowd_params
 
 
-class StripAttentionModule(pl.LightningModule):
+class StripAttentionModule(nn.Module):
     def __init__(self, in_chan, out_chan, *args, **kwargs):
         super(StripAttentionModule, self).__init__()
         self.conv1 = ConvBNReLU(in_chan, 64, ks=1, stride=1, padding=0)
@@ -77,9 +77,9 @@ class StripAttentionModule(pl.LightningModule):
     def forward(self, x):
         q = self.conv1(x)
         batchsize, c_middle, h, w = q.size()
-        # q = F.avg_pool2d(q, [h, 1])
+        q = F.avg_pool2d(q, [h, 1])
         # print(h)
-        q = F.avg_pool2d(q, [30, 1])
+        # q = F.avg_pool2d(q, [30, 1])
         q = q.view(batchsize, c_middle, -1).permute(0, 2, 1)
 
         k = self.conv2(x)
@@ -89,9 +89,9 @@ class StripAttentionModule(pl.LightningModule):
 
         v = self.conv3(x)
         c_out = v.size()[1]
-        # v = F.avg_pool2d(v, [h, 1])
+        v = F.avg_pool2d(v, [h, 1])
         # print(h)
-        v = F.avg_pool2d(v, [30, 1])
+        # v = F.avg_pool2d(v, [30, 1])
         v = v.view(batchsize, c_out, -1)
 
         augmented_feature_map = torch.bmm(v, attention_map)
@@ -117,7 +117,7 @@ class StripAttentionModule(pl.LightningModule):
         return wd_params, nowd_params
 
 
-class AttentionFusionModule(pl.LightningModule):
+class AttentionFusionModule(nn.Module):
     def __init__(self, in_chan, out_chan, *args, **kwargs):
         super(AttentionFusionModule, self).__init__()
         self.conv = ConvBNReLU(in_chan, out_chan, ks=1, stride=1, padding=0)
@@ -132,9 +132,9 @@ class AttentionFusionModule(pl.LightningModule):
         fcat = torch.cat([feat16, feat32_up], dim=1)
         feat = self.conv(fcat)
 
-        # atten = F.avg_pool2d(feat, feat.size()[2:])
+        atten = F.avg_pool2d(feat, feat.size()[2:])
         # print(feat.size()[2:])
-        atten = F.avg_pool2d(feat, [30, 31])
+        # atten = F.avg_pool2d(feat, [30, 31])
         atten = self.conv_atten(atten)
         atten = self.bn_atten(atten)
         atten = self.sigmoid_atten(atten)
@@ -158,7 +158,7 @@ class AttentionFusionModule(pl.LightningModule):
         return wd_params, nowd_params
 
 
-class AttaNetHead(pl.LightningModule):
+class AttaNetHead(nn.Module):
     def __init__(self, *args, **kwargs):
         super(AttaNetHead, self).__init__()
         self.resnet = ResNet18()
@@ -212,7 +212,7 @@ class AttaNetHead(pl.LightningModule):
         return wd_params, nowd_params
 
 
-class AttaNet(pl.LightningModule):
+class AttaNet(nn.Module):
     def __init__(self, n_classes, *args, **kwargs):
         super(AttaNet, self).__init__()
         self.head = AttaNetHead()
@@ -258,23 +258,4 @@ class AttaNet(pl.LightningModule):
                 nowd_params += child_nowd_params
         return wd_params, nowd_params, lr_mul_wd_params, lr_mul_nowd_params
 
-    def loss_function(self, outputs, labels):
-        loss = Tverskyloss()
-        return loss.forward(outputs, labels)
 
-    def training_step(self, train_batch, batch_idx):
-        image, label = train_batch
-        output = self.forward(image)
-        loss = self.loss_function(output, label)
-        self.log('train loss', loss)
-        return {'loss': loss}
-
-    def validation_step(self, val_batch, batch_idx):
-        image, label = val_batch
-        output = self.forward(image)
-        loss = self.loss_function(output, label)
-        self.log('val_loss', loss)
-
-    def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.parameters(), lr=1e-4)
-        return {'optimizer': optimizer}

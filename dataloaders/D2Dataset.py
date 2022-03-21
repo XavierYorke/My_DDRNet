@@ -4,7 +4,7 @@ from torchvision import transforms
 
 
 def default_loader(path):
-    return Image.open(path).convert('RGB')
+    return Image.open(path).crop((728, 885, 2376, 1685)).convert('RGB')
 
 
 class D2Dataset(Dataset):
@@ -14,8 +14,8 @@ class D2Dataset(Dataset):
         self.transform = trans
 
     def __getitem__(self, index):
-        image_path = self.data_path[index][0]
-        label_path = self.data_path[index][1]
+        image_path = self.data_path[index]['image']
+        label_path = self.data_path[index]['label']
         image = default_loader(image_path)
         label = default_loader(label_path)
         if self.transform is not None:
@@ -30,11 +30,14 @@ class D2Dataset(Dataset):
 
 
 train_transforms = transforms.Compose([
+    transforms.Resize((400, 824)),
+    transforms.ColorJitter(0.5),
     transforms.ToTensor(),
     # transforms.Normalize([0.485, 0.456, 0.406],
     #                      [0.229, 0.224, 0.225])
 ])
 val_transforms = transforms.Compose([
+    transforms.Resize((400, 824)),
     transforms.ToTensor(),
     # transforms.Normalize([0.485, 0.456, 0.406],
     #                      [0.229, 0.224, 0.225])
