@@ -1,0 +1,15 @@
+data_config:
+  #H_G: \image\distance \mask\distance_mask 480 x 496
+  dataset_dir: Datasets/test
+  txt_dir: "data"
+
+train_config:
+  epochs: 100
+  batch_size: 6
+  learning_rate: 0.0001
+  output_dir: outputs
+  iterations: 10
+  seed: 1228
+
+net_config:
+  n_classes: 2
