@@ -5,13 +5,14 @@ from torch.utils.data import DataLoader
 import pytorch_lightning as pl
 from pytorch_lightning.loggers import TensorBoardLogger
 from pytorch_lightning.callbacks import LearningRateMonitor, ModelSummary, ModelCheckpoint
+from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 import os.path as osp
 from tools import TrainingModule
 
 
 def main(epochs, batch_size, output_dir):
     log_dir = osp.join(output_dir, 'logs')
-    tb_logger = TensorBoardLogger(save_dir=log_dir)
+    tb_logger = TensorBoardLogger(save_dir=log_dir, name=config['name'])
     lr_monitor = LearningRateMonitor(logging_interval='step')
     checkpoint_callback = ModelCheckpoint(
         monitor="dice",
@@ -21,6 +22,11 @@ def main(epochs, batch_size, output_dir):
         mode="max",
         save_on_train_epoch_end=True
     )
+    early_stop_callback = EarlyStopping(
+            monitor='val_loss',
+            patience=10,
+            mode='min'
+        )
 
     train_dict, val_dict = split_2ds(data_config['dataset_dir'], 0.8)
     train_ds = D2Dataset(train_dict, train_transforms)
@@ -35,7 +41,7 @@ def main(epochs, batch_size, output_dir):
         checkpoint_callback=True,
         check_val_every_n_epoch=1,
         log_every_n_steps=1,
-        callbacks=[lr_monitor, ModelSummary(max_depth=-1), checkpoint_callback]
+        callbacks=[lr_monitor, ModelSummary(max_depth=-1),  checkpoint_callback, early_stop_callback]
     )
     trainer.fit(model, train_loader, val_loader)
 

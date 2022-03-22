@@ -3,8 +3,6 @@ import torch.nn.functional as F
 import torch
 from .backbone import ResNet18
 from torch.nn import BatchNorm2d
-import pytorch_lightning as pl
-from loss import Tverskyloss
 
 
 class ConvBNReLU(nn.Module):
