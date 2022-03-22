@@ -11,7 +11,7 @@ from tools import TrainingModule
 
 def main(epochs, batch_size, output_dir):
     log_dir = osp.join(output_dir, 'logs')
-    tb_logger = TensorBoardLogger(save_dir=log_dir, name=config['name'])
+    tb_logger = TensorBoardLogger(save_dir=log_dir)
     lr_monitor = LearningRateMonitor(logging_interval='step')
     checkpoint_callback = ModelCheckpoint(
         monitor="dice",

@@ -1,5 +1,3 @@
-name: AttaNet
-
 data_config:
   #H_G: \image\distance \mask\distance_mask 480 x 496
   dataset_dir: D:\GLX\Projects\FQ2022\AttaNet\Dataset\2022.3.10
