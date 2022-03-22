@@ -17,7 +17,7 @@ class D2Dataset(Dataset):
         image_path = self.data_path[index]['image']
         label_path = self.data_path[index]['label']
         image = default_loader(image_path)
-        label = default_loader(label_path)
+        label = Image.open(label_path).crop((728, 885, 2376, 1685)).convert('L')
         if self.transform is not None:
             # 数据标签转换为Tensor
             image = self.transform(image)
