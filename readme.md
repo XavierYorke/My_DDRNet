@@ -20,6 +20,17 @@
 │  └─trainer
 └─main.py
 ````
+### 数据目录格式
+```
+├─Datasets
+│  └─Data
+│      ├─images
+│      │  ├─1
+│      │  └─2
+│      └─labels
+│          ├─1
+│          └─2
+```
 ### 训练
 ```bash
 python main.py
