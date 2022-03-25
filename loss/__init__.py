@@ -1,1 +1,1 @@
-from .loss import Tverskyloss
+from .loss import Tverskyloss, OhemCELoss

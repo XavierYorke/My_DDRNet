@@ -1,7 +1,7 @@
 import torch
 import pytorch_lightning as pl
 from models import AttaNet
-from loss import Tverskyloss
+from loss import Tverskyloss, OhemCELoss
 from monai.visualize.img2tensorboard import plot_2d_or_3d_image
 from medpy import metric
 import numpy as np
@@ -14,39 +14,58 @@ class TrainingModule(pl.LightningModule):
         self.config = config
         self.learning_rate = self.config['learning_rate']
         self.model = AttaNet(config['n_classes'])
-        self.lossfn = Tverskyloss()
+        # self.lossfn = Tverskyloss()
+        score_thres = 0.7
+        n_min = 400 * 400 // 2
+        ignore_idx = 255
+        self.criteria_p = OhemCELoss(thresh=score_thres, n_min=n_min, ignore_lb=ignore_idx)
+        self.criteria_aux1 = OhemCELoss(thresh=score_thres, n_min=n_min, ignore_lb=ignore_idx)
+        self.criteria_aux2 = OhemCELoss(thresh=score_thres, n_min=n_min, ignore_lb=ignore_idx)
+        # self.lossfn = OhemCELoss(thresh=score_thres, n_min=n_min, ignore_lb=ignore_lb)
 
     def training_step(self, batch, batch_idx):
-        image, label = batch
-        result = self.model(image)
-        loss = self.lossfn(result, label)
+        images, labels = batch
+        out, out16, out32 = self.model(images)
+        lossp = self.criteria_p(out, labels)
+        loss1 = self.criteria_aux1(out16, labels)
+        loss2 = self.criteria_aux2(out32, labels)
+        loss = lossp + loss1 + loss2
+        # result = self.model(image)
+        # loss = self.lossfn(result[0], label)
         self.log('loss', loss)
         return {'loss': loss}
 
     def validation_step(self, batch, batch_idx):
         images, labels = batch
-        result = self.model(images)
-        loss = self.lossfn(result, labels)
+        # labels = torch.squeeze(labels, 1)
+        # result = self.model(images)
+        out, out16, out32 = self.model(images)
+        lossp = self.criteria_p(out, labels)
+        loss1 = self.criteria_aux1(out16, labels)
+        loss2 = self.criteria_aux2(out32, labels)
+        loss = lossp + loss1 + loss2
+        # loss = self.lossfn(result[0], labels)
         self.log('val_loss', loss)
 
-        plot_2d_or_3d_image(tag="result", data=result[0], step=self.current_epoch, writer=self.logger.experiment,
+        plot_2d_or_3d_image(tag="result", data=out, step=self.current_epoch, writer=self.logger.experiment,
                             frame_dim=-1)
         plot_2d_or_3d_image(tag="image", data=images, step=self.current_epoch, writer=self.logger.experiment,
                             frame_dim=-1)
         plot_2d_or_3d_image(tag="label", data=labels, step=self.current_epoch, writer=self.logger.experiment,
                             frame_dim=-1)
 
-        result = result[0]
+        # result = result[0]
+        result = out
         dice, precision, recall, tnr = [], [], [], []
         val_number = len(result)
         for index in range(val_number):
             image = result[index].cpu().detach().numpy()
             label = labels[index].cpu().detach().numpy()
 
-            image[image >= 0.5] = 1
-            image[image < 0.5] = 0
-            label[label >= 0.5] = 1
-            label[label < 0.5] = 0
+            # image[image >= 0.5] = 1
+            # image[image < 0.5] = 0
+            # label[label >= 0.5] = 1
+            # label[label < 0.5] = 0
 
             # Dice系数是一种集合相似度度量函数，通常用于计算两个样本的相似度，取值范围在[0,1]
             dice.append(metric.dc(image.astype(np.uint8), label.astype(np.uint8)))
@@ -67,7 +86,6 @@ class TrainingModule(pl.LightningModule):
         for result in step_outputs:
             loss += result['loss']
         loss = loss / len(step_outputs)
-
 
     def validation_epoch_end(self, step_outputs):
         loss = 0.

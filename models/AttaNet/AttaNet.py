@@ -217,11 +217,11 @@ class AttaNet(nn.Module):
         self.conv_out = AttaNetOutput(128, 128, n_classes)
         self.conv_out1 = AttaNetOutput(128, 64, n_classes)
         self.conv_out2 = AttaNetOutput(128, 64, n_classes)
-        self.map4 = nn.Sequential(
-            nn.Conv2d(2, 1, 1),
-            nn.Upsample(scale_factor=(1, 1), mode='bilinear', align_corners=True),
-            nn.Sigmoid()
-        )
+        # self.map4 = nn.Sequential(
+        #     nn.Conv2d(2, 1, 1),
+        #     nn.Upsample(scale_factor=(1, 1), mode='bilinear', align_corners=True),
+        #     nn.Sigmoid()
+        # )
         self.init_weight()
 
     def forward(self, x):
@@ -235,7 +235,7 @@ class AttaNet(nn.Module):
         feat_out = F.interpolate(feat_out, (h, w), mode='bilinear', align_corners=True)
         feat_aux1 = F.interpolate(feat_aux1, (h, w), mode='bilinear', align_corners=True)
         feat_aux2 = F.interpolate(feat_aux2, (h, w), mode='bilinear', align_corners=True)
-        feat_out = self.map4(feat_out)
+        # feat_out = self.map4(feat_out)
         return feat_out, feat_aux1, feat_aux2
 
     def init_weight(self):
@@ -257,3 +257,10 @@ class AttaNet(nn.Module):
         return wd_params, nowd_params, lr_mul_wd_params, lr_mul_nowd_params
 
 
+if __name__ == '__main__':
+    inputs = torch.randn(2, 3, 512, 512).to('cuda')
+    n_classes = 19
+    net = AttaNet(n_classes).to('cuda')
+    out = net(inputs)
+    for o in out:
+        print(o.shape)

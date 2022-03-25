@@ -1,6 +1,6 @@
 import argparse
 import yaml
-from dataloaders import split_2ds, D2Dataset, train_transforms, val_transforms
+from dataloaders import split_2ds, D2Dataset, train_transforms, val_transforms, return_train_val
 from torch.utils.data import DataLoader
 import pytorch_lightning as pl
 from pytorch_lightning.loggers import TensorBoardLogger
@@ -16,7 +16,7 @@ def main(epochs, batch_size, output_dir):
     lr_monitor = LearningRateMonitor(logging_interval='step')
     checkpoint_callback = ModelCheckpoint(
         monitor="dice",
-        filename="{epoch:02d}-{dice:.2f}",
+        filename="{epoch:02d}-{dice:.4f}",
         save_last=True,
         save_top_k=3,
         mode="max",
@@ -24,11 +24,12 @@ def main(epochs, batch_size, output_dir):
     )
     early_stop_callback = EarlyStopping(
             monitor='val_loss',
-            patience=10,
+            patience=20,
             mode='min'
         )
 
-    train_dict, val_dict = split_2ds(data_config['dataset_dir'], 0.8)
+    # train_dict, val_dict = split_2ds(data_config['dataset_dir'], 0.8)
+    train_dict, val_dict = return_train_val(data_config['dataset_dir'])
     train_ds = D2Dataset(train_dict, train_transforms)
     val_ds = D2Dataset(val_dict, val_transforms)
     train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True, num_workers=2)
